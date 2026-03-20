@@ -2,10 +2,7 @@ module github.com/filesystem/fs-workflow
 
 go 1.23
 
-require (
-	github.com/filesystem/fs-worker v0.0.0
-	go.temporal.io/sdk v1.32.0
-)
+require go.temporal.io/sdk v1.32.0
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -34,5 +31,3 @@ require (
 	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/filesystem/fs-worker => ../fs-worker
