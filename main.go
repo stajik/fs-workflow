@@ -40,6 +40,7 @@ func main() {
 
 	w.RegisterWorkflow(workflows.InitBranch)
 	w.RegisterWorkflow(workflows.Exec)
+	w.RegisterWorkflow(workflows.ExecFs)
 	w.RegisterWorkflow(workflows.CreateTemplate)
 
 	log.Printf("Worker registered on task queue %q — waiting for workflow tasks", taskQueue)
