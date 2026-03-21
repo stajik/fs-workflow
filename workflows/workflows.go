@@ -32,11 +32,13 @@ type InitBranchInput struct {
 // ---------------------------------------------------------------------------
 
 type ExecInput struct {
-	ID          string     `json:"id"`
-	Mode        BranchMode `json:"mode"`
-	TemplateID  string     `json:"template_id"`
-	Cmd         string     `json:"cmd"`
-	UseSnapshot bool       `json:"use_snapshot"`
+	ID             string     `json:"id"`
+	Mode           BranchMode `json:"mode"`
+	TemplateID     string     `json:"template_id"`
+	Cmd            string     `json:"cmd"`
+	TargetSnapshot string     `json:"target_snapshot"`
+	BaseSnapshot   string     `json:"base_snapshot"`
+	UseSnapshot    bool       `json:"use_snapshot"`
 }
 
 type ExecOutput struct {
@@ -121,11 +123,13 @@ func Exec(ctx workflow.Context, input ExecInput) (ExecOutput, error) {
 
 	var result ExecOutput
 	err := workflow.ExecuteActivity(actCtx, "Exec", ExecInput{
-		ID:          input.ID,
-		Mode:        input.Mode,
-		TemplateID:  input.TemplateID,
-		Cmd:         input.Cmd,
-		UseSnapshot: input.UseSnapshot,
+		ID:             input.ID,
+		Mode:           input.Mode,
+		TemplateID:     input.TemplateID,
+		Cmd:            input.Cmd,
+		TargetSnapshot: input.TargetSnapshot,
+		BaseSnapshot:   input.BaseSnapshot,
+		UseSnapshot:    input.UseSnapshot,
 	}).Get(ctx, &result)
 	if err != nil {
 		logger.Error("Exec activity failed", "id", input.ID, "error", err)
