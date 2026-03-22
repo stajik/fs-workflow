@@ -42,6 +42,8 @@ func main() {
 	w.RegisterWorkflow(workflows.Exec)
 	w.RegisterWorkflow(workflows.ExecFs)
 	w.RegisterWorkflow(workflows.CreateTemplate)
+	w.RegisterWorkflow(workflows.LoadGen)
+	w.RegisterWorkflow(workflows.FsWorkloadItem)
 
 	log.Printf("Worker registered on task queue %q — waiting for workflow tasks", taskQueue)
 
