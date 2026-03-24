@@ -32,19 +32,29 @@ type InitBranchInput struct {
 // ---------------------------------------------------------------------------
 
 type ExecInput struct {
-	ID             string     `json:"id"`
-	Mode           BranchMode `json:"mode"`
-	TemplateID     string     `json:"template_id"`
-	Cmd            string     `json:"cmd"`
-	TargetSnapshot string     `json:"target_snapshot"`
-	BaseSnapshot   string     `json:"base_snapshot"`
-	UseSnapshot    bool       `json:"use_snapshot"`
+	ID             string            `json:"id"`
+	Mode           BranchMode        `json:"mode"`
+	TemplateID     string            `json:"template_id"`
+	Cmd            string            `json:"cmd"`
+	TargetSnapshot string            `json:"target_snapshot"`
+	BaseSnapshot   string            `json:"base_snapshot"`
+	UseSnapshot    bool              `json:"use_snapshot"`
+	Reconstruct    *ReconstructInput `json:"reconstruct,omitempty"`
 }
 
 type ExecOutput struct {
 	ExitCode int    `json:"exit_code"`
 	Stdout   string `json:"stdout"`
 	Stderr   string `json:"stderr"`
+}
+
+// ReconstructInput holds the snapshot chain needed to rebuild a branch from
+// S3 diffs when the worker no longer has the branch locally.
+type ReconstructInput struct {
+	// Snapshots is the ordered list of snapshot names that make up the branch
+	// history. Each snapshot (except the first) has a corresponding
+	// incremental diff in S3 at "<branchID>/<snapshot>".
+	Snapshots []string `json:"snapshots"`
 }
 
 // ---------------------------------------------------------------------------

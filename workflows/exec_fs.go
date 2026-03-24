@@ -3,6 +3,7 @@ package workflows
 import (
 	"fmt"
 	"math/rand"
+	"strings"
 
 	"go.temporal.io/sdk/workflow"
 )
@@ -59,15 +60,33 @@ func (s *BranchSession) Exec(ctx workflow.Context, templateID, cmd string) (Exec
 
 	actCtx := workflow.WithActivityOptions(ctx, defaultActivityOptions())
 
-	var result ExecOutput
-	err := workflow.ExecuteActivity(actCtx, "Exec", ExecInput{
+	execInput := ExecInput{
 		ID:             s.BranchID,
 		Mode:           s.Mode,
 		TemplateID:     templateID,
 		Cmd:            cmd,
 		TargetSnapshot: targetSnapshot,
 		BaseSnapshot:   baseSnapshot,
-	}).Get(ctx, &result)
+	}
+
+	var result ExecOutput
+	err := workflow.ExecuteActivity(actCtx, "Exec", execInput).Get(ctx, &result)
+
+	// If the activity failed because the worker doesn't have the branch or
+	// snapshot, retry with reconstruction input so the worker can rebuild
+	// from S3 diffs.
+	if err != nil && s.needsReconstruction(err) && len(s.SnapshotHistory) > 0 {
+		logger := workflow.GetLogger(ctx)
+		logger.Info("BranchSession.Exec: activity failed with not-found error, retrying with reconstruction",
+			"branch_id", s.BranchID,
+			"error", err,
+		)
+
+		execInput.Reconstruct = s.buildReconstructInput()
+
+		err = workflow.ExecuteActivity(actCtx, "Exec", execInput).Get(ctx, &result)
+	}
+
 	if err != nil {
 		return ExecFsExecResponse{}, fmt.Errorf("exec activity failed: %w", err)
 	}
@@ -86,6 +105,32 @@ func (s *BranchSession) Exec(ctx workflow.Context, templateID, cmd string) (Exec
 		Stdout:   result.Stdout,
 		Stderr:   result.Stderr,
 	}, nil
+}
+
+// needsReconstruction returns true if the error indicates that the worker
+// does not have the branch or snapshot locally (e.g. after a failover to a
+// different worker).
+func (s *BranchSession) needsReconstruction(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "does not exist") ||
+		strings.Contains(msg, "dataset does not exist") ||
+		strings.Contains(msg, "could not find") ||
+		strings.Contains(msg, "no such pool or dataset")
+}
+
+// buildReconstructInput creates a ReconstructInput from the session's
+// snapshot history. The snapshots are ordered chronologically — the first
+// entry is the earliest snapshot (built on __init, no S3 diff), and
+// subsequent entries each have an incremental diff in S3.
+func (s *BranchSession) buildReconstructInput() *ReconstructInput {
+	snapshots := make([]string, len(s.SnapshotHistory))
+	for i, rec := range s.SnapshotHistory {
+		snapshots[i] = rec.Snapshot
+	}
+	return &ReconstructInput{Snapshots: snapshots}
 }
 
 // ---------------------------------------------------------------------------
